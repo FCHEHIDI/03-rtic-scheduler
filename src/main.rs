@@ -198,11 +198,25 @@ mod app {
         shared = [sensor_buffer],
         local  = [sensor_consumer]
     )]
-    async fn filter_process(mut cx: filter_process::Context) {
-        // TODO étape 5 : filtre médian, spawner uart_send
-        cx.shared.sensor_buffer.lock(|_buf| {
-            // placeholder
-        });
+    async fn filter_process(mut cx: filter_process::Context<'_>){
+        if let Some(mut reading) = cx.local.sensor_consumer.dequeue() {
+            // Filtre médiean trivial sur le buffer partagé (3 dernières valeurs)
+            let filtered = cx.shared.sensor_buffer.lock(|buf| {
+                // Décale le buffer et insère la nouvelle valeur
+                buf.rotate_right(1);
+                buf[0] = reading.raw_value;
+
+                // Médiane sur les 3 premières valeurs
+                let mut window = [buf[0], buf[1], buf[2]];
+                window.sort_unstable();
+                window[1] // valeur médiane
+            });
+
+            reading.filtered_value = filtered;
+
+            // Transmettre à uart_send
+            uart_send::spawn(reading).ok();
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -212,10 +226,24 @@ mod app {
         priority = 2,
         shared = [uart]
     )]
-    async fn uart_send(mut cx: uart_send::Context, reading: SensorReading) {
-        // TODO étape 5 : formater et envoyer via USART2
-        cx.shared.uart.lock(|_uart| {
-            defmt::info!("uart_send placeholder: {}", reading);
+    async fn uart_send(mut cx: uart_send::Context<'_>, reading: SensorReading) {
+        // formater et envoyer via USART2
+        cx.shared.uart.lock(|uart| {
+            use core::fmt::Write;
+            writeln!(
+                uart,
+                "ts={}ms raw={} filt={}\r",
+                reading.timestamp_ms,
+                reading.raw_value,
+                reading.filtered_value
+            )
+            .ok();
+            defmt::info!(
+                "sent: ts={}ms raw={} filt={}",
+                reading.timestamp_ms,
+                reading.raw_value,
+                reading.filtered_value
+            );
         });
     }
 
