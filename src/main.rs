@@ -48,7 +48,6 @@ mod app {
     use stm32f4xx_hal::prelude::*;
     use rtic_monotonics::systick::prelude::*;
     use crate::Mono;
-    use rtic::Mutex;
 
     // -----------------------------------------------------------------------
     // Ressources partagées : accédées depuis plusieurs tâches → lock RTIC
@@ -109,17 +108,6 @@ mod app {
         // Spawner [heartbeat] la tâche doit se lancer au boot
         heartbeat::spawn().unwrap();
 
-        async fn heartbeat(mut cx: heartbeat::Context<'_>) {
-            loop {
-                cx.local.led.toggle();
-                cx.shared.cpu_stats.lock(|stats| {
-                    defmt::info!("heartbeat | CPU load: {}%", stats.load_percent());
-                });
-
-                Mono::delay(1000.millis()).await;
-            }
-        }
-
         (
             Shared {
                 sensor_buffer: [0; 32],
@@ -139,14 +127,26 @@ mod app {
     // idle — priorité 0, tourne en continu quand aucune tâche n'est prête
     // -----------------------------------------------------------------------
     #[idle(shared = [cpu_stats])]
+
     fn idle(mut cx: idle::Context) -> ! {
+    let mut last_measurement = cortex_m::peripheral::DWT::cycle_count();
+
         loop {
-            // TODO étape 6 : mesure DWT
-            cx.shared.cpu_stats.lock(|_stats| {
-                // placeholder
-            
-            });
+            let idle_start = cortex_m::peripheral::DWT::cycle_count();
+        
             cortex_m::asm::nop();
+
+            let idle_end = cortex_m::peripheral::DWT::cycle_count();
+            let idle_cycles = idle_end.wrapping_sub(idle_start);
+
+            cx.shared.cpu_stats.lock(|stats| {
+                stats.idle_cycles = stats.idle_cycles.wrapping_add(idle_cycles);
+                stats.total_cycles = stats.total_cycles.wrapping_add(
+                    idle_end.wrapping_sub(last_measurement)
+                );
+            });
+
+            last_measurement = idle_end;
         }
     }
 
@@ -256,9 +256,15 @@ mod app {
         local  = [led]
     )]
     async fn heartbeat(mut cx: heartbeat::Context<'_>) {
-        // TODO étape 4 : toggle LED, attendre 1 s via monotonique, logguer charge CPU
-        cx.shared.cpu_stats.lock(|stats| {
-            defmt::info!("CPU load: {}%", stats.load_percent());
+        loop {
+            cx.local.led.toggle();
+
+            cx.shared.cpu_stats.lock(|stats| {
+                defmt::info!("heartbeat | CPU load: {}%", stats.load_percent());
+                *stats = CpuStats::default();
         });
+
+            Mono::delay(1000.millis()).await;
+        }
     }
 }

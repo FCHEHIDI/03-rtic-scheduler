@@ -12,7 +12,7 @@
     { gpio :: { Output, PushPull, PA5 }, pac :: USART2, serial :: Tx, }; use
     stm32f4xx_hal :: timer :: { CounterMs, Event, }; use stm32f4xx_hal ::
     prelude :: * ; use rtic_monotonics :: systick :: prelude :: * ; use crate
-    :: Mono; use rtic :: Mutex; #[doc = r" User code end"] impl < 'a >
+    :: Mono; #[doc = r" User code end"] impl < 'a >
     __rtic_internal_initLocalResources < 'a >
     {
         #[inline(always)] #[allow(missing_docs)] pub unsafe fn new() -> Self
@@ -87,18 +87,6 @@
         tim2.start(10_u32.millis()).unwrap(); tim2.listen(Event :: Update);
         cx.core.DCB.enable_trace(); cx.core.DWT.enable_cycle_counter(); Mono
         :: start(cx.core.SYST, 84_000_000); heartbeat :: spawn().unwrap();
-        async fn heartbeat(mut cx : heartbeat :: Context < '_ >)
-        {
-            loop
-            {
-                cx.local.led.toggle();
-                cx.shared.cpu_stats.lock(| stats |
-                {
-                    defmt :: info!
-                    ("heartbeat | CPU load: {}%", stats.load_percent());
-                }); Mono :: delay(1000.millis()).await;
-            }
-        }
         (Shared
         {
             sensor_buffer : [0; 32], uart : serial, cpu_stats : CpuStats ::
@@ -150,8 +138,22 @@
         __rtic_internal_idle_Context as Context;
     } #[allow(non_snake_case)] fn idle(mut cx : idle :: Context) -> !
     {
-        use rtic :: Mutex as _; use rtic :: mutex :: prelude :: * ; loop
-        { cx.shared.cpu_stats.lock(| _stats | {}); cortex_m :: asm :: nop(); }
+        use rtic :: Mutex as _; use rtic :: mutex :: prelude :: * ; let mut
+        last_measurement = cortex_m :: peripheral :: DWT :: cycle_count();
+        loop
+        {
+            let idle_start = cortex_m :: peripheral :: DWT :: cycle_count();
+            cortex_m :: asm :: nop(); let idle_end = cortex_m :: peripheral ::
+            DWT :: cycle_count(); let idle_cycles =
+            idle_end.wrapping_sub(idle_start);
+            cx.shared.cpu_stats.lock(| stats |
+            {
+                stats.idle_cycles =
+                stats.idle_cycles.wrapping_add(idle_cycles);
+                stats.total_cycles =
+                stats.total_cycles.wrapping_add(idle_end.wrapping_sub(last_measurement));
+            }); last_measurement = idle_end;
+        }
     } #[allow(non_snake_case)] #[no_mangle] unsafe fn TIM2()
     {
         const PRIORITY : u8 = 4u8; rtic :: export ::
@@ -510,20 +512,43 @@
     } #[allow(non_snake_case)] async fn filter_process < 'a >
     (mut cx : filter_process :: Context < 'a >)
     {
-        use rtic :: Mutex as _; use rtic :: mutex :: prelude :: * ;
-        cx.shared.sensor_buffer.lock(| _buf | {});
+        use rtic :: Mutex as _; use rtic :: mutex :: prelude :: * ; if let
+        Some(mut reading) = cx.local.sensor_consumer.dequeue()
+        {
+            let filtered =
+            cx.shared.sensor_buffer.lock(| buf |
+            {
+                buf.rotate_right(1); buf [0] = reading.raw_value; let mut
+                window = [buf [0], buf [1], buf [2]]; window.sort_unstable();
+                window [1]
+            }); reading.filtered_value = filtered; uart_send ::
+            spawn(reading).ok();
+        }
     } #[allow(non_snake_case)] async fn uart_send < 'a >
     (mut cx : uart_send :: Context < 'a > , reading : SensorReading)
     {
         use rtic :: Mutex as _; use rtic :: mutex :: prelude :: * ;
-        cx.shared.uart.lock(| _uart |
-        { defmt :: info! ("uart_send placeholder: {}", reading); });
+        cx.shared.uart.lock(| uart |
+        {
+            use core :: fmt :: Write; writeln!
+            (uart, "ts={}ms raw={} filt={}\r", reading.timestamp_ms,
+            reading.raw_value, reading.filtered_value).ok(); defmt :: info!
+            ("sent: ts={}ms raw={} filt={}", reading.timestamp_ms,
+            reading.raw_value, reading.filtered_value);
+        });
     } #[allow(non_snake_case)] async fn heartbeat < 'a >
     (mut cx : heartbeat :: Context < 'a >)
     {
-        use rtic :: Mutex as _; use rtic :: mutex :: prelude :: * ;
-        cx.shared.cpu_stats.lock(| stats |
-        { defmt :: info! ("CPU load: {}%", stats.load_percent()); });
+        use rtic :: Mutex as _; use rtic :: mutex :: prelude :: * ; loop
+        {
+            cx.local.led.toggle();
+            cx.shared.cpu_stats.lock(| stats |
+            {
+                defmt :: info!
+                ("heartbeat | CPU load: {}%", stats.load_percent()); * stats =
+                CpuStats :: default();
+            }); Mono :: delay(1000.millis()).await;
+        }
     } #[allow(non_camel_case_types)] #[allow(non_upper_case_globals)]
     #[doc(hidden)] #[link_section = ".uninit.rtic0"] static
     __rtic_internal_shared_resource_sensor_buffer : rtic :: RacyCell < core ::

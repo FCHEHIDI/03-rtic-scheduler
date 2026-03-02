@@ -1,0 +1,11 @@
+D:\03-rtic-scheduler\target\thumbv7em-none-eabihf\release\deps\enumflags2-bfdb4e59e01430a3.d: C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\lib.rs C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\formatting.rs C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\fallible.rs C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\iter.rs C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\const_api.rs
+
+D:\03-rtic-scheduler\target\thumbv7em-none-eabihf\release\deps\libenumflags2-bfdb4e59e01430a3.rlib: C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\lib.rs C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\formatting.rs C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\fallible.rs C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\iter.rs C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\const_api.rs
+
+D:\03-rtic-scheduler\target\thumbv7em-none-eabihf\release\deps\libenumflags2-bfdb4e59e01430a3.rmeta: C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\lib.rs C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\formatting.rs C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\fallible.rs C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\iter.rs C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\const_api.rs
+
+C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\lib.rs:
+C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\formatting.rs:
+C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\fallible.rs:
+C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\iter.rs:
+C:\Users\info\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\enumflags2-0.7.12\src\const_api.rs:
