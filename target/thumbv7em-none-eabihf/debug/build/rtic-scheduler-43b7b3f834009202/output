@@ -1,0 +1,2 @@
+cargo:rustc-link-search=D:\03-rtic-scheduler\target\thumbv7em-none-eabihf\debug\build\rtic-scheduler-43b7b3f834009202\out
+cargo:rerun-if-changed=memory.x
